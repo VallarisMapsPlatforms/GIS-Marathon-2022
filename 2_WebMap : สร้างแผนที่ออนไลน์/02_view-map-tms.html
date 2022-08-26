@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Display map with TMS</title>
+    <meta
+      name="viewport"
+      content="initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <script src="https://unpkg.com/maplibre-gl@2.1.6/dist/maplibre-gl.js"></script>
+    <link
+      href="https://unpkg.com/maplibre-gl@2.1.6/dist/maplibre-gl.css"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      #map {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script>
+      var map = new maplibregl.Map({
+        container: "map", // container id
+        style:
+          "https://cloud.vallarismaps.com/core/api/styles/1.0-beta/styles/62174db7092fe54e18c5b984?api_key=8pM6VWiF0CUnQxVTX1HwnZdNCNn4b8gDaMvlc7WpvqlyIF4xSclZQr9mhacIcAcr", // style URL
+        center: [0, 0], // starting position [lng, lat]
+        zoom: 1, // starting zoom
+      });
+      map.on("load", function () {
+        map.addSource("tms-test-source", {
+          type: "raster",
+          // use the tiles option to specify a WMS tile source URL
+          // https://maplibre.org/maplibre-gl-js-docs/style-spec/sources/
+          tiles: [
+            "https://cloud.vallarismaps.com/core/api/maps/1.0-beta/maps/62174cf1f934f778c9c27013/tms/{z}/{x}/{y}.png?api_key=8pM6VWiF0CUnQxVTX1HwnZdNCNn4b8gDaMvlc7WpvqlyIF4xSclZQr9mhacIcAcr",
+          ],
+          tileSize: 256,
+        });
+        map.addLayer({
+          id: "tms-test-layer",
+          type: "raster",
+          source: "tms-test-source",
+          paint: {},
+        });
+      });
+    </script>
+  </body>
+</html>

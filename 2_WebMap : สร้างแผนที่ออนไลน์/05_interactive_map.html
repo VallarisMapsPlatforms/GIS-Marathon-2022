@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Display a map</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <script src="https://unpkg.com/maplibre-gl@2.1.6/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl@2.1.6/dist/maplibre-gl.css" rel="stylesheet" />
+
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/latest/jquery.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+        }
+
+        #console {
+            position: absolute;
+            margin: 10px;
+            width: 240px;
+            background-color: white;
+            padding: 10px 20px;
+        }
+
+        .session {
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        #datepicker {
+            width: 100%
+        }
+
+        .mapboxgl-popup {
+            max-width: 400px;
+            font: 12px 'Kanit';
+        }
+
+        #feature-listing {
+            max-height: 80%;
+            overflow-y: auto;
+            margin-top: 16px;
+        }
+
+       #feature-listing .listing p {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            color: #404;
+            text-decoration: none;
+            }
+    </style>
+</head>
+
+<body>
+
+
+    <div id="map">
+    </div>
+    <div id="console">
+        <div class="session">
+            <input id='datepicker' type="text" name="datetimes" />
+            <div id="feature-listing" class="listing"></div>
+        </div>
+
+    </div>
+    </div>
+
+
+
+
+
+    <script>
+        var map = new maplibregl.Map({
+            container: "map", // container id
+            style:
+                "https://cloud.vallarismaps.com/core/api/styles/1.0-beta/styles/62179441e839174308a9ca5e?api_key=8pM6VWiF0CUnQxVTX1HwnZdNCNn4b8gDaMvlc7WpvqlyIF4xSclZQr9mhacIcAcr", // style URL
+            center: [0, 0], // starting position [lng, lat]
+            zoom: 1, // starting zoom
+        });
+
+
+        const listingEl = document.getElementById('feature-listing');
+
+        function renderListings(features) {
+            const empty = document.createElement('p');
+            // Clear any existing listings
+            listingEl.innerHTML = '';
+            if (features.length) {
+                for (const feature of features) {
+                    const itemLink = document.createElement('p');
+                    const label = `${feature.properties.title}`;
+                    itemLink.textContent = label;
+                    listingEl.appendChild(itemLink);
+                }
+
+            } else if (features.length === 0 ) {
+                empty.textContent = 'No results found';
+                listingEl.appendChild(empty);
+            } else {
+                empty.textContent = 'Drag the map to populate results';
+                listingEl.appendChild(empty);
+            }
+        }
+
+        map.once('idle', () => {
+            const features = map.queryRenderedFeatures({ layers: ['earthquake'] });
+            if (features.length) {
+                const sort = features.sort((a, b) => (moment(b.properties.time).format("x")) - (moment(a.properties.time).format("x")));
+                $(function () {
+                    $('input[name="datetimes"]').daterangepicker({
+                        timePicker: true,
+                        startDate: moment(sort[0].properties.time).startOf('hour'),
+                        endDate: moment(sort[0].properties.time).startOf('hour').add(32, 'hour'),
+                        minDate: moment(sort[sort.length - 1].properties.time).startOf('hour'),
+                        maxDate: moment(sort[0].properties.time).startOf('hour'),
+                        locale: {
+                            format: 'M/DD hh:mm A'
+                        }
+                    }, function (start, end, label) {
+                        map.setFilter('earthquake', ['all', ['>=', ['number', ['get', 'time']], parseInt(moment(start).format("x"))], ['<=', ['number', ['get', 'time']], parseInt(moment(end).format("x"))]])
+
+                    });
+                });
+            }
+
+
+            let quakeID = null;
+            let source = null;
+            let sourceLayer = null
+            let selected = false
+            const popup = new maplibregl.Popup({
+
+            });
+
+
+            map.on('mousemove', 'earthquake', (event) => {
+
+                map.getCanvas().style.cursor = 'pointer';
+
+                if (event.features.length === 0) return;
+
+                if (quakeID) {
+                    map.removeFeatureState({
+                        source: source,
+                        sourceLayer: sourceLayer,
+                        id: quakeID
+                    });
+                }
+
+                quakeID = event.features[0].id;
+                source = event.features[0].source
+                sourceLayer = event.features[0].sourceLayer
+
+                map.setFeatureState(
+                    {
+                        source: source,
+                        sourceLayer: sourceLayer,
+                        id: quakeID
+                    },
+                    {
+                        hover: true
+                    }
+                );
+            });
+
+
+            map.on('mouseleave', 'earthquake', () => {
+                if (selected) {
+
+                } else {
+                    if (quakeID) {
+                        map.setFeatureState(
+                            {
+                                source: source,
+                                sourceLayer: sourceLayer,
+                                id: quakeID
+                            },
+                            {
+                                hover: false
+                            }
+                        );
+                    }
+                    quakeID = null;
+                    source = null
+                    sourceLayer = null
+                    map.getCanvas().style.cursor = '';
+                }
+
+            });
+
+
+            map.on('click', 'earthquake', (event) => {
+                if (event.features.length === 0) {
+
+                    if (quakeID !== null) {
+                        popup.remove()
+                        map.setFeatureState(
+                            {
+                                source: source,
+                                sourceLayer: sourceLayer,
+                                id: quakeID
+                            },
+                            {
+                                hover: false
+                            }
+                        );
+                        quakeID = null;
+                        source = null
+                        sourceLayer = null
+                        selected = false
+                    }
+                } else {
+                    selected = true
+                    quakeID = event.features[0].id;
+                    source = event.features[0].source
+                    sourceLayer = event.features[0].sourceLayer
+
+                    map.setFeatureState(
+                        {
+                            source: source,
+                            sourceLayer: sourceLayer,
+                            id: quakeID
+                        },
+                        {
+                            hover: true
+                        }
+                    );
+
+                    const coordinates = event.features[0].geometry.coordinates.slice();
+
+                    while (Math.abs(event.lngLat.lng - coordinates[0]) > 180) {
+                        coordinates[0] += event.lngLat.lng > coordinates[0] ? 360 : -360;
+                    }
+
+                    popup.setLngLat(coordinates).setHTML(`<div style="width:100%;max-height:400px;overflow-y:auto;min-width:250px">
+                                <h5 style="margin: 0px;">Source Feature : ${event.features[0].layer["source-layer"]
+                        }</h5>
+                                <table style="width:100%;">
+                                ${Object.keys(event.features[0].properties)
+                            .map((k, i) => {
+                                return `<tr >
+                                <th style="font-size: 10px;text-align:start;">${k}</th>
+                                <th  style="font-size: 10px;text-align:start;">${event.features[0].properties[k]}</th>
+                                </tr>`;
+                            })
+                            .join("")}
+                                    </table>
+                                </div>`).addTo(map);
+                }
+
+
+            })
+
+
+            popup.on("close", () => {
+                if (quakeID !== null) {
+                    map.setFeatureState(
+                        {
+                            source: source,
+                            sourceLayer: sourceLayer,
+                            id: quakeID
+                        },
+                        { hover: false }
+                    );
+
+                    selected = false;
+                } else {
+                }
+            });
+
+            map.on('moveend', () => {
+                const features = map.queryRenderedFeatures({ layers: ['earthquake'] });
+
+                if (features) {
+                    // console.log(features)
+                    renderListings(features);
+ 
+                }
+            });
+
+        })
+
+    </script>
+</body>
+
+</html>

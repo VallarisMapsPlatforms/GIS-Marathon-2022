@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Extrude layer map</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <script src="https://unpkg.com/maplibre-gl@2.1.6/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl@2.1.6/dist/maplibre-gl.css" rel="stylesheet" />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map">
+    </div>
+    <script>
+        var map = new maplibregl.Map({
+            container: "map", // container id
+            style:
+                "https://cloud.vallarismaps.com/core/api/styles/1.0-beta/styles/62187a6855da1866e3b46efc?api_key=8pM6VWiF0CUnQxVTX1HwnZdNCNn4b8gDaMvlc7WpvqlyIF4xSclZQr9mhacIcAcr", // style URL
+            center: [0, 0], // starting position [lng, lat]
+            zoom: 1, // starting zoom
+        });
+
+        map.on('load', () => {
+            const isLayer = map.getLayer('Population')
+            if (isLayer) {
+                map.setPaintProperty(isLayer.id, 'fill-extrusion-color',
+                    [
+                        'interpolate',
+                        [
+                            'linear'
+                        ],
+                        [
+                            'get',
+                            'general'
+                        ],
+                        1,
+                        '#D9ED92',
+                        50,
+                        '#B5E48C',
+                        100,
+                        '#99D98C',
+                        500,
+                        '#76C893',
+                        1000,
+                        '#52B69A',
+                        5000,
+                        '#34A0A4',
+                        10000,
+                        '#168AAD',
+                        20000,
+                        '#1A759F',
+                        50000,
+                        '#1E6091',
+                        100000,
+                        '#1E6091'
+                    ]
+                )
+
+                map.setPaintProperty(isLayer.id, 'fill-extrusion-height',
+                    [
+                        '*',
+                        [
+                            'get',
+                            'general'
+                        ],
+                        0.1
+                    ]
+
+                )
+
+                map.setPaintProperty(isLayer.id, 'fill-extrusion-opacity', 0.8)
+
+             
+            }
+        })
+
+    </script>
+</body>
+
+</html>
